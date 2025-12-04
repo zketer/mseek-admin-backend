@@ -1,0 +1,114 @@
+# 统一认证配置
+museum:
+  auth:
+    # 认证策略配置
+    strategies:
+      internal-service:
+        enabled: true
+        order: 1
+        header-name: X-Internal-Call
+        service-token-header: X-Service-Token  
+        service-id-header: X-Service-ID
+        # 允许的服务列表（空表示允许所有已注册的服务）
+        allowed-services: []
+        allowed-ips:
+          - 127.0.0.1
+          - ::1
+          - localhost
+          - 192.168.0.0/16
+          - 10.0.0.0/8
+          - 172.16.0.0/12
+      oauth2:
+        enabled: true
+        order: 2
+    
+    # 白名单配置 - 不需要认证的路径
+    whitelist:
+      patterns:
+        # 健康检查和监控
+        - "/actuator/**"
+        - "/health"
+        - "/info"
+        - "/metrics"
+        
+        # API文档（通用模式匹配，支持所有服务）
+        - "/swagger-ui/**"
+        - "/v3/api-docs/**"
+        - "/v2/api-docs/**" 
+        - "/swagger-resources/**"
+        - "/swagger-resources"
+        - "/swagger-resources/configuration/**"
+        - "/webjars/**"
+        - "/doc.html"
+        - "/favicon.ico"
+
+        # web openapi端点
+        - "/api/v1/auth/v3/api-docs"
+        - "/api/v1/system/v3/api-docs"
+        - "/api/v1/museums/v3/api-docs"
+        - "/api/v1/files/v3/api-docs"
+
+        # 显示路由
+        - "/api/v1/auth/captcha"
+        - "/api/v1/auth/login"
+        - "/api/v1/auth/register"
+        - "/api/v1/auth/send-code"
+        - "/api/v1/auth/reset-password"
+        - "/api/v1/auth/oauth2/**"
+        - "/api/v1/auth/refresh"
+        - "/api/v1/auth/.well-known/**"
+        
+        # APP版本相关端点（供登录页访问）
+        - "/api/v1/museums/app-versions/latest"
+        - "/api/v1/museums/app-versions/*/download-url"
+        
+        # 小程序免认证接口（公开数据） - 显式路由
+        - "/api/v1/museums/miniapp/banners"
+        - "/api/v1/museums/miniapp/banners/**"
+        - "/api/v1/museums/miniapp/announcements"
+        - "/api/v1/museums/miniapp/announcements/**"
+        - "/api/v1/museums/miniapp/categories"
+        - "/api/v1/museums/miniapp/categories/**"
+        - "/api/v1/museums/miniapp/museums"
+        - "/api/v1/museums/miniapp/museums/**"
+        - "/api/v1/museums/miniapp/exhibitions"
+        - "/api/v1/museums/miniapp/exhibitions/**"
+        - "/api/v1/museums/miniapp/favorites"
+        - "/api/v1/museums/miniapp/favorites/**"
+
+        # 通用服务健康检查和监控（支持所有服务）
+        - "/*/api/*/health"
+        - "/*/api/*/info"  
+        - "/*/api/*/actuator/**"
+        
+        # 公共资源
+        - "/public/**"
+        - "/static/**"
+        - "/assets/**"
+        - "/*.html"
+        - "/*.css"
+        - "/*.js"
+        - "/*.ico"
+        
+        # 开发环境专用（生产环境应该移除）
+        - "/test/**"
+        - "/debug/**"
+
+    # OAuth2配置
+    oauth2:
+      wechat:
+        app-id: ${WECHAT_APP_ID:}
+        app-secret: ${WECHAT_APP_SECRET:}
+        redirect-uri: ${WECHAT_REDIRECT_URI:}
+      alipay:
+        app-id: ${ALIPAY_APP_ID:}
+        private-key: ${ALIPAY_PRIVATE_KEY:}
+        public-key: ${ALIPAY_PUBLIC_KEY:}
+
+    # JWT配置
+    jwt:
+      access-token-expire: 7200  # 2小时
+      refresh-token-expire: 604800  # 7天
+      issuer: auth-service  # 修正为与auth-service一致
+      header-name: Authorization
+      token-prefix: "Bearer "

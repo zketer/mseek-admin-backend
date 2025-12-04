@@ -620,14 +620,13 @@ cat common-service/file-service/src/main/resources/application.yml
 mvn clean install -U
 ```
 
-## 📚 相关文档
+## 相关文档
 
-### 📖 项目文档
+### 项目文档
 
-- 📘 **API 文档**: http://localhost:8000/doc.html
--  **认证系统**: [docs/unified-auth-usage-guide.md](./docs/unified-auth-usage-guide.md)
+- **API 文档**: http://localhost:8000/doc.html
 
-### 🔗 外部资源
+### 外部资源
 
 | 资源 | 链接 | 说明 |
 |-----|------|------|

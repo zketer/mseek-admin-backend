@@ -1,0 +1,90 @@
+spring:
+  config:
+    import: optional:nacos:${spring.cloud.nacos.config.server-addr}
+  cloud:
+    nacos:
+      discovery:
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:-}
+        server-addr: ${NACOS_SERVER_ADDR:nacos}
+        namespace: ${NACOS_NAMESPACE:public}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        service: ${spring.application.name}
+        register-enabled: true
+        enabled: true
+
+      config:
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:-}
+        server-addr: ${NACOS_SERVER_ADDR:nacos}
+        namespace: ${NACOS_NAMESPACE:public}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        file-extension: yml
+
+  # 数据源配置
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/mseek_user?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:rootroot}
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1 FROM DUAL
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+      filters: stat,wall,slf4j
+      connection-properties: druid.stat.mergeSql\=true;druid.stat.slowSqlMillis\=5000
+      web-stat-filter:
+        enabled: true
+        url-pattern: "/*"
+        exclusions: "*.js,*.gif,*.jpg,*.bmp,*.png,*.css,*.ico,/druid/*"
+      stat-view-servlet:
+        enabled: true
+        url-pattern: "/druid/*"
+        login-username: admin
+        login-password: 123456
+
+  # Redis配置
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:-}
+      database: ${REDIS_DATABASE:0}
+      timeout: 10000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1ms
+          max-idle: 8
+          min-idle: 2  # 保持最小空闲连接，避免连接全部失效
+          time-between-eviction-runs: 60000  # 空闲连接检测周期（毫秒）
+        shutdown-timeout: 100ms
+        # Lettuce 客户端配置
+        cluster:
+          refresh:
+            adaptive: true  # 自适应刷新拓扑
+        # 连接验证配置
+        validation-query-timeout: 3000  # 验证查询超时时间
+      # 连接池配置优化
+      client-type: lettuce  # 使用 Lettuce 客户端
+      connect-timeout: 5000ms  # 连接超时时间
+      # 启用连接测试
+      test-on-borrow: true  # 从连接池获取连接时测试
+      test-on-return: false  # 归还连接时不测试
+      test-while-idle: true  # 空闲时测试连接有效性
+
+# 日志配置
+logging:
+  config: classpath:logback-spring.xml
+  file:
+    path: /app/logs

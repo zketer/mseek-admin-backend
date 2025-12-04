@@ -1,0 +1,200 @@
+spring:
+  config:
+    import: optional:nacos:${spring.cloud.nacos.config.server-addr}
+  cloud:
+    nacos:
+      discovery:
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:-}
+        server-addr: ${NACOS_SERVER_ADDR:nacos}
+        namespace: ${NACOS_NAMESPACE:public}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+      config:
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:-}
+        server-addr: ${NACOS_SERVER_ADDR:nacos}
+        namespace: ${NACOS_NAMESPACE:public}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:-}
+      database: ${REDIS_DATABASE:0}
+      timeout: 10000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1ms
+          max-idle: 8
+          min-idle: 2  # 保持最小空闲连接，避免连接全部失效
+          time-between-eviction-runs: 60000  # 空闲连接检测周期（毫秒）
+        shutdown-timeout: 100ms
+        # Lettuce 客户端配置
+        cluster:
+          refresh:
+            adaptive: true  # 自适应刷新拓扑
+        # 连接验证配置
+        validation-query-timeout: 3000  # 验证查询超时时间
+      # 连接池配置优化
+      client-type: lettuce  # 使用 Lettuce 客户端
+      connect-timeout: 5000ms  # 连接超时时间
+      # 启用连接测试
+      test-on-borrow: true  # 从连接池获取连接时测试
+      test-on-return: false  # 归还连接时不测试
+      test-while-idle: true  # 空闲时测试连接有效性
+
+  # 邮件配置（163邮箱）
+  mail:
+    host: ${MAIL_HOST:smtp.163.com}
+    port: ${MAIL_PORT:465}
+    username: ${MAIL_USERNAME:-}
+    password: ${MAIL_PASSWORD:-}  # 163邮箱授权码
+    from: ${MAIL_FROM:-}
+    code-expire-minutes: 5  # 验证码有效期（分钟）
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          ssl:
+            enable: true
+          socketFactory:
+            port: 465
+            class: javax.net.ssl.SSLSocketFactory
+            fallback: false
+          timeout: 5000
+          connectiontimeout: 5000
+    default-encoding: UTF-8
+
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/mseek_auth?useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowMultiQueries=true&useSSL=false&allowPublicKeyRetrieval=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=Asia/Shanghai
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:rootroot}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1 FROM DUAL
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+      filters: stat,wall,log4j2
+      connection-properties: druid.stat.mergeSql\=true;druid.stat.slowSqlMillis\=5000
+      web-stat-filter:
+        enabled: true
+        url-pattern: "/*"
+        exclusions: "*.js,*.gif,*.jpg,*.bmp,*.png,*.css,*.ico,/druid/*"
+      stat-view-servlet:
+        enabled: true
+        url-pattern: "/druid/*"
+        login-username: admin
+        login-password: 123456
+
+# ==========================================
+# JWT 高级认证配置
+# 支持RS256非对称加密、令牌黑名单、多层缓存
+# ==========================================
+jwt:
+  rsa:
+    private-key: ${JWT_RSA_PRIVATE_KEY:-}
+    public-key: ${JWT_RSA_PUBLIC_KEY:-}
+    key-id: ${JWT_RSA_KEY_ID:-}
+  # 正常生产配置
+  access-token-expiration: 7200000  # 2小时
+  refresh-token-expiration: 604800000  # 7天
+  issuer: auth-service
+
+# 博物馆认证服务配置
+museum:
+  auth:
+    jwt:
+      # JWT访问令牌过期时间（秒）
+      access-token-expire: 7200  # 2小时
+      # JWT刷新令牌过期时间（秒）
+      # Web端
+      refresh-token-expire: 604800  # 7天
+      # APP端（支持长期登录）
+      app-refresh-token-expire: 7776000  # 90天
+      # 刷新令牌滑动窗口（天），当剩余有效期小于此值时，自动颁发新的 Refresh Token
+      refresh-token-sliding-window: 30  # 30天
+    device:
+      # 设备管理配置
+      # 单用户最大设备数量（0表示不限制）
+      max-devices-per-user: 5
+      # 设备不活跃自动下线时间（天），0表示不自动下线
+      inactive-days: 90
+    login:
+      # 最大重试次数
+      max-retry: 5
+      # 账户锁定时间（秒），默认30分钟
+      lock-time: 60
+    oauth2:
+      # 授权码过期时间（秒），默认10分钟
+      auth-code-expire: 600
+    wechat:
+      # 微信小程序配置
+      miniprogram:
+        app-id: ${WECHAT_MINIPROGRAM_APPID:-} # 小程序AppID
+        app-secret: ${WECHAT_MINIPROGRAM_SECRET:-} # 小程序AppSecret
+        api-base-url: https://api.weixin.qq.com
+      # 微信开放平台网站应用配置（测试号）
+      web:
+        app-id: ${WECHAT_WEB_APPID:-} # 微信测试号 appID
+        app-secret: ${WECHAT_WEB_APPSECRET:-} # 微信测试号 appsecret
+        redirect-uri: ${APP_DOMAIN:YOUR_DOMAIN}/api/v1/auth/oauth2/callback # 授权回调地址（注意要加 /api/v1/auth 前缀）
+        test-mode: true # 测试模式：使用公众号网页授权（必须设置为 true）
+    alipay:
+      # 支付宝开放平台网站应用配置
+      web:
+        app-id: ${ALIPAY_APP_ID:-} # 支付宝应用ID（从你的截图中看到的）
+        private-key: ${ALIPAY_PRIVATE_KEY:-} # 应用私钥（需要从支付宝开放平台获取）
+        alipay-public-key: ${ALIPAY_PUBLIC_KEY:-} # 支付宝公钥（需要从支付宝开放平台获取）
+        server-url: https://openapi.alipay.com/gateway.do # 支付宝网关地址
+        format: json
+        charset: utf-8
+        sign-type: RSA2 # 签名算法
+        redirect-uri: ${APP_DOMAIN:YOUR_DOMAIN}/oauth2/callback # 授权回调地址
+      # 支付宝小程序配置（如果有的话）
+      miniprogram:
+        app-id: ${ALIPAY_MINIPROGRAM_APPID:} # 支付宝小程序AppID
+        private-key: ${ALIPAY_MINIPROGRAM_PRIVATE_KEY:} # 支付宝小程序私钥
+    qq:
+      # QQ互联网站应用配置
+      web:
+        app-id: ${QQ_APP_ID:} # QQ互联应用ID (需要从QQ互联开放平台获取)
+        app-key: ${QQ_APP_KEY:} # QQ互联应用密钥 (需要从QQ互联开放平台获取)
+        authorize-url: https://graph.qq.com/oauth2.0/authorize # QQ授权地址
+        token-url: https://graph.qq.com/oauth2.0/token # QQ获取token地址
+        open-id-url: https://graph.qq.com/oauth2.0/me # QQ获取OpenID地址
+        user-info-url: https://graph.qq.com/user/get_user_info # QQ获取用户信息地址
+        redirect-uri: ${APP_DOMAIN:YOUR_DOMAIN}/oauth2/callback # 授权回调地址
+        scope: get_user_info # 授权范围
+        response-type: code # 响应类型
+        display: pc # 显示方式
+    github:
+      # GitHub OAuth应用配置
+      web:
+        client-id: ${GITHUB_CLIENT_ID:-} # GitHub OAuth应用Client ID
+        client-secret: ${GITHUB_CLIENT_SECRET:-} # GitHub OAuth应用Client Secret
+        authorize-url: https://github.com/login/oauth/authorize # GitHub授权地址
+        token-url: https://github.com/login/oauth/access_token # GitHub获取token地址
+        user-info-url: https://api.github.com/user # GitHub获取用户信息地址
+        redirect-uri: ${APP_DOMAIN:YOUR_DOMAIN}/oauth2/callback # 授权回调地址
+        scope: read:user user:email # 授权范围
+
+# 日志配置
+logging:
+  config: classpath:logback-spring.xml
+  file:
+    path: /app/logs

@@ -1,0 +1,246 @@
+package com.lynn.museum.info.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.lynn.museum.info.dto.MuseumStatisticsResponse;
+import com.lynn.museum.info.mapper.CheckinRecordMapper;
+import com.lynn.museum.info.mapper.MuseumCategoryMapper;
+import com.lynn.museum.info.mapper.MuseumInfoMapper;
+import com.lynn.museum.info.model.entity.CheckinRecord;
+import com.lynn.museum.info.model.entity.MuseumCategory;
+import com.lynn.museum.info.model.entity.MuseumInfo;
+import com.lynn.museum.info.service.MuseumStatisticsService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.util.Date;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * 博物馆统计信息服务实现
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class MuseumStatisticsServiceImpl implements MuseumStatisticsService {
+
+    private final MuseumInfoMapper museumInfoMapper;
+    private final CheckinRecordMapper checkinRecordMapper;
+    private final MuseumCategoryMapper museumCategoryMapper;
+
+    @Override
+    public MuseumStatisticsResponse getMuseumStatistics(Integer days) {
+        // 获取总博物馆数（只统计display=1的）
+        Long totalMuseums = museumInfoMapper.selectCount(new LambdaQueryWrapper<MuseumInfo>()
+                .eq(MuseumInfo::getDeleted, 0)
+                .eq(MuseumInfo::getDisplay, 1));
+
+        // 获取开放中博物馆数（display=1 且 status=1）
+        Long activeMuseums = museumInfoMapper.selectCount(new LambdaQueryWrapper<MuseumInfo>()
+                .eq(MuseumInfo::getDeleted, 0)
+                .eq(MuseumInfo::getDisplay, 1)
+                .eq(MuseumInfo::getStatus, 1));
+
+        // 计算维护中博物馆数（display=1 但 status=0）
+        Long maintenanceMuseums = totalMuseums - activeMuseums;
+
+        // 获取今日访客数
+        LocalDateTime todayStart = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
+        LocalDateTime todayEnd = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
+        Long visitorsToday = checkinRecordMapper.selectCount(new LambdaQueryWrapper<CheckinRecord>()
+                .eq(CheckinRecord::getDeleted, 0)
+                .between(CheckinRecord::getCheckinTime, 
+                    Date.from(todayStart.atZone(ZoneId.systemDefault()).toInstant()),
+                    Date.from(todayEnd.atZone(ZoneId.systemDefault()).toInstant())));
+
+        // 获取本周访客数
+        LocalDateTime weekStart = todayStart.minusDays(todayStart.getDayOfWeek().getValue() - 1);
+        Long visitorsWeek = checkinRecordMapper.selectCount(new LambdaQueryWrapper<CheckinRecord>()
+                .eq(CheckinRecord::getDeleted, 0)
+                .between(CheckinRecord::getCheckinTime, weekStart, todayEnd));
+
+        // 获取本月访客数
+        LocalDateTime monthStart = todayStart.withDayOfMonth(1);
+        Long visitorsMonth = checkinRecordMapper.selectCount(new LambdaQueryWrapper<CheckinRecord>()
+                .eq(CheckinRecord::getDeleted, 0)
+                .between(CheckinRecord::getCheckinTime, monthStart, todayEnd));
+
+        // 获取本年访客数
+        LocalDateTime yearStart = todayStart.withDayOfYear(1);
+        Long visitorsYear = checkinRecordMapper.selectCount(new LambdaQueryWrapper<CheckinRecord>()
+                .eq(CheckinRecord::getDeleted, 0)
+                .between(CheckinRecord::getCheckinTime, yearStart, todayEnd));
+
+        // 获取月访客趋势
+        List<MuseumStatisticsResponse.VisitorsTrend> visitorsTrend = getVisitorsTrend();
+
+        // 获取展览类别分布
+        List<MuseumStatisticsResponse.CategoryDistribution> categoryDistribution = getCategoryDistribution();
+
+        // 获取热门博物馆
+        List<MuseumStatisticsResponse.TopMuseum> topMuseums = getTopMuseums();
+
+        // 构建并返回响应
+        return MuseumStatisticsResponse.builder()
+                .totalMuseums(totalMuseums)
+                .activeMuseums(activeMuseums)
+                .maintenanceMuseums(maintenanceMuseums)
+                .visitorsToday(visitorsToday)
+                .visitorsWeek(visitorsWeek)
+                .visitorsMonth(visitorsMonth)
+                .visitorsYear(visitorsYear)
+                .visitorsTrend(visitorsTrend)
+                .categoryDistribution(categoryDistribution)
+                .topMuseums(topMuseums)
+                .build();
+    }
+
+    /**
+     * 获取月访客趋势
+     *
+     * @return 月访客趋势
+     */
+    private List<MuseumStatisticsResponse.VisitorsTrend> getVisitorsTrend() {
+        List<MuseumStatisticsResponse.VisitorsTrend> result = new ArrayList<>();
+        
+        // 获取当前年份
+        int currentYear = LocalDate.now().getYear();
+        DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("M月");
+        
+        // 获取每月的访客数据
+        for (int month = 1; month <= 12; month++) {
+            LocalDateTime monthStart = LocalDateTime.of(currentYear, month, 1, 0, 0);
+            
+            // 计算月末
+            LocalDateTime monthEnd;
+            if (month == 12) {
+                monthEnd = LocalDateTime.of(currentYear, month, 31, 23, 59, 59);
+            } else {
+                monthEnd = LocalDateTime.of(currentYear, month + 1, 1, 0, 0).minusSeconds(1);
+            }
+            
+            // 如果是未来月份，跳过
+            if (monthStart.isAfter(new Date())) {
+                continue;
+            }
+            
+            // 查询该月的访客数
+            Long visitors = checkinRecordMapper.selectCount(new LambdaQueryWrapper<CheckinRecord>()
+                    .eq(CheckinRecord::getDeleted, 0)
+                    .between(CheckinRecord::getCheckinTime, monthStart, monthEnd));
+            
+            // 格式化月份名称
+            String monthName = monthStart.format(monthFormatter);
+            
+            // 添加到结果列表
+            result.add(new MuseumStatisticsResponse.VisitorsTrend(monthName, visitors));
+        }
+        
+        return result;
+    }
+
+    /**
+     * 获取展览类别分布
+     *
+     * @return 展览类别分布
+     */
+    private List<MuseumStatisticsResponse.CategoryDistribution> getCategoryDistribution() {
+        // 获取所有博物馆分类
+        List<MuseumCategory> categories = museumCategoryMapper.selectList(new LambdaQueryWrapper<MuseumCategory>()
+                .eq(MuseumCategory::getDeleted, 0)
+                .eq(MuseumCategory::getStatus, 1));
+        
+        List<MuseumStatisticsResponse.CategoryDistribution> result = new ArrayList<>();
+        
+        // 如果没有分类数据，返回空列表
+        if (categories.isEmpty()) {
+            return result;
+        }
+        
+        // 使用自定义SQL查询每个分类下的博物馆数量
+        // 这里需要通过 mapper 执行自定义SQL查询
+        // 假设我们有一个方法可以查询分类及其博物馆数量
+        List<Map<String, Object>> categoryStats = museumCategoryMapper.selectCategoryStatistics();
+        
+        if (categoryStats != null && !categoryStats.isEmpty()) {
+            for (Map<String, Object> stat : categoryStats) {
+                Long categoryId = ((Number) stat.get("category_id")).longValue();
+                Long count = ((Number) stat.get("museum_count")).longValue();
+                
+                // 查找对应的分类名称
+                String categoryName = categories.stream()
+                        .filter(cat -> cat.getId().equals(categoryId))
+                        .map(MuseumCategory::getName)
+                        .findFirst()
+                        .orElse("未知分类");
+                
+                if (count > 0) {
+                    result.add(new MuseumStatisticsResponse.CategoryDistribution(categoryName, count));
+                }
+            }
+        }
+        
+        return result;
+    }
+
+    /**
+     * 获取热门博物馆
+     *
+     * @return 热门博物馆
+     */
+    private List<MuseumStatisticsResponse.TopMuseum> getTopMuseums() {
+        // 获取今日打卡记录
+        LocalDateTime todayStart = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
+        LocalDateTime todayEnd = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
+        List<CheckinRecord> todayRecords = checkinRecordMapper.selectList(new LambdaQueryWrapper<CheckinRecord>()
+                .eq(CheckinRecord::getDeleted, 0)
+                .between(CheckinRecord::getCheckinTime, todayStart, todayEnd));
+
+        // 按博物馆ID分组统计打卡人数
+        Map<Long, Long> museumVisitorsMap = todayRecords.stream()
+                .collect(Collectors.groupingBy(CheckinRecord::getMuseumId, Collectors.counting()));
+
+        // 获取热门博物馆信息
+        List<MuseumStatisticsResponse.TopMuseum> topMuseums = new ArrayList<>();
+        museumVisitorsMap.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
+                .limit(5)
+                .forEach(entry -> {
+                    Long museumId = entry.getKey();
+                    Long visitors = entry.getValue();
+
+                    // 查询博物馆信息
+                    MuseumInfo museumInfo = museumInfoMapper.selectById(museumId);
+                    if (museumInfo != null) {
+                        // 计算容量使用率
+                        int capacityUsage = 0;
+                        if (museumInfo.getCapacity() > 0) {
+                            capacityUsage = (int) (visitors * 100 / museumInfo.getCapacity());
+                        }
+
+                        topMuseums.add(MuseumStatisticsResponse.TopMuseum.builder()
+                                .id(museumId)
+                                .name(museumInfo.getName())
+                                .visitors(visitors)
+                                .status(museumInfo.getStatus())
+                                .capacityUsage(capacityUsage)
+                                .build());
+                    }
+                });
+
+        // 如果没有数据，则返回空列表
+        // 不添加模拟数据，保持数据真实性
+
+        return topMuseums;
+    }
+}

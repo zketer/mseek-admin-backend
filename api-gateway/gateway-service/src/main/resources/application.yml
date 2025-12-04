@@ -1,0 +1,81 @@
+spring:
+  application:
+    name: gateway-service
+  profiles:
+    active: local
+    include: unified-auth
+
+server:
+  port: 8000
+
+# Spring Boot Actuator 管理端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        # 暴露的端点列表
+        # health: 健康检查 - /actuator/health
+        # info: 应用信息 - /actuator/info
+        # metrics: 性能指标 - /actuator/metrics
+        # prometheus: Prometheus格式指标 - /actuator/prometheus
+        # gateway: 网关专用端点 - /actuator/gateway
+        include: health,info,metrics,prometheus,gateway
+      base-path: /actuator
+
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+    
+    gateway:
+      enabled: true
+  
+  health:
+    redis:
+      enabled: true
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+
+knife4j:
+  gateway:
+    # ① 第一个配置，开启gateway聚合组件
+    enabled: true
+    # ② 使用服务发现模式 - 更优雅的自动聚合方式
+    strategy: discover
+    # 排序规则
+    tags-sorter: order
+    operations-sorter: order
+    discover:
+      # ③ 启用服务发现
+      enabled: true
+      # ④ 指定OpenAPI3规范
+      version: openapi3
+      # ⑤ 排除网关服务本身
+      excluded-services:
+        - gateway-service
+      # ⑥ OpenAPI3个性化配置
+      oas3:
+        url: /v3/api-docs?group=default
+      service-config:
+        auth-service:
+          order: 1
+          group-name: 认证服务
+          context-path: /api/v1/auth
+        user-service:
+          order: 2
+          group-name: 用户管理服务
+          context-path: /api/v1/system
+        museum-service:
+          order: 3
+          group-name: 博物馆信息服务
+          context-path: /api/v1/museums
+        file-service:
+          order: 4
+          group-name: 文件管理服务
+          context-path: /api/v1/files

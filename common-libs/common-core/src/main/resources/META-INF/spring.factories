@@ -1,0 +1,2 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+com.lynn.museum.common.redis.config.RedisAutoConfiguration

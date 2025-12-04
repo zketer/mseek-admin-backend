@@ -1,0 +1,115 @@
+spring:
+  config:
+    import: optional:nacos:${spring.cloud.nacos.config.server-addr}
+
+  cloud:
+    # Nacos 服务注册与发现配置
+    nacos:
+      discovery:
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:-}
+        # Nacos服务器地址，集群部署时可配置多个地址 格式：ip1:port1,ip2:port2,ip3:port3
+        server-addr: ${NACOS_SERVER_ADDR:nacos}
+        namespace: ${NACOS_NAMESPACE:public}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        # 注册到Nacos的服务名
+        service: ${spring.application.name}
+        # 是否注册到Nacos
+        register-enabled: true
+        # 是否启用服务发现
+        enabled: true
+
+      # 配置中心配置
+      config:
+        # Nacos配置中心认证信息
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:-}
+        # 配置中心服务器地址
+        server-addr: ${NACOS_SERVER_ADDR:nacos}
+        # 配置文件的命名空间
+        namespace: ${NACOS_NAMESPACE:public}
+        # 配置文件的分组
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        # 配置文件的格式
+        # 支持：properties, yaml, yml, json, xml
+        file-extension: yml
+
+    gateway:
+      discovery:
+        locator:
+          enabled: true  # 开启服务发现路由（访问 /{service-name} 转发到对应服务）
+          filters:
+            - StripPrefix=1  # 移除第一段路径前缀（服务名），避免路径重复
+
+      # 显式路由配置（测试与服务发现路由共存）
+      routes:
+        # 认证服务路由 - 支持直接通过 /api/v1/auth 访问
+        - id: auth-service-direct
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - StripPrefix=0
+
+        # 用户服务路由 - 支持直接通过 /api/v1/users 访问
+        - id: user-service-direct
+          uri: lb://user-service
+          predicates:
+            - Path=/api/v1/system/**
+          filters:
+            - StripPrefix=0
+
+        # 博物馆信息服务路由 - 支持直接通过 /api/v1/museums 访问
+        - id: museum-service-direct
+          uri: lb://museum-service
+          predicates:
+            - Path=/api/v1/museums/**
+          filters:
+            - StripPrefix=0
+
+        # 文件服务路由 - 支持直接通过 /api/v1/files 访问
+        - id: file-service-direct
+          uri: lb://file-service
+          predicates:
+            - Path=/api/v1/files/**
+          filters:
+            - StripPrefix=0
+
+  # Redis 配置
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:-}
+      database: ${REDIS_DATABASE:0}
+      timeout: 10000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1ms
+          max-idle: 8
+          min-idle: 2  # 保持最小空闲连接，避免连接全部失效
+          time-between-eviction-runs: 60000  # 空闲连接检测周期（毫秒）
+        shutdown-timeout: 100ms
+        # Lettuce 客户端配置
+        cluster:
+          refresh:
+            adaptive: true  # 自适应刷新拓扑
+        # 连接验证配置
+        validation-query-timeout: 3000  # 验证查询超时时间
+      # 连接池配置优化
+      client-type: lettuce  # 使用 Lettuce 客户端
+      connect-timeout: 5000ms  # 连接超时时间
+      # 启用连接测试
+      test-on-borrow: true  # 从连接池获取连接时测试
+      test-on-return: false  # 归还连接时不测试
+      test-while-idle: true  # 空闲时测试连接有效性
+
+
+# ==========================================
+# 日志配置
+# ==========================================
+logging:
+  config: classpath:logback-spring.xml
+  file:
+    path: /app/logs

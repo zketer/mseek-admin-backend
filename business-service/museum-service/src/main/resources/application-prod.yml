@@ -1,0 +1,127 @@
+spring:
+  # 数据源配置
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/mseek_museum?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:rootroot}
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1 FROM DUAL
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+      filters: stat,wall,slf4j
+      connection-properties: druid.stat.mergeSql\=true;druid.stat.slowSqlMillis\=5000
+      web-stat-filter:
+        enabled: true
+        url-pattern: "/*"
+        exclusions: "*.js,*.gif,*.jpg,*.bmp,*.png,*.css,*.ico,/druid/*"
+      stat-view-servlet:
+        enabled: true
+        url-pattern: "/druid/*"
+        login-username: admin
+        login-password: 123456
+
+  # Redis配置
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+      database: ${REDIS_DATABASE:0}
+      timeout: 10000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1ms
+          max-idle: 8
+          min-idle: 2  # 保持最小空闲连接，避免连接全部失效
+          time-between-eviction-runs: 60000  # 空闲连接检测周期（毫秒）
+        shutdown-timeout: 100ms
+        # Lettuce 客户端配置
+        cluster:
+          refresh:
+            adaptive: true  # 自适应刷新拓扑
+        # 连接验证配置
+        validation-query-timeout: 3000  # 验证查询超时时间
+      # 连接池配置优化
+      client-type: lettuce  # 使用 Lettuce 客户端
+      connect-timeout: 5000ms  # 连接超时时间
+      # 启用连接测试
+      test-on-borrow: true  # 从连接池获取连接时测试
+      test-on-return: false  # 归还连接时不测试
+      test-while-idle: true  # 空闲时测试连接有效性
+
+  config:
+    import: optional:nacos:${spring.cloud.nacos.config.server-addr}
+  cloud:
+    nacos:
+      discovery:
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:CEw7BBL6LTSA68x6}
+        server-addr: ${NACOS_SERVER_ADDR:120.48.171.70:8848}
+        namespace: ${NACOS_NAMESPACE:1f48e9ea-4ddd-43c6-bcd2-4ebcaa844348}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        service: ${spring.application.name}
+        register-enabled: true
+        enabled: true
+
+      config:
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:CEw7BBL6LTSA68x6}
+        server-addr: ${NACOS_SERVER_ADDR:120.48.171.70:8848}
+        namespace: ${NACOS_NAMESPACE:1f48e9ea-4ddd-43c6-bcd2-4ebcaa844348}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        file-extension: yml
+
+# 自定义应用配置
+app:
+  auto-audit:
+    enabled: false # 是否启用自动审核系统，默认关闭
+    api-url: http://localhost:8080/api/audit # 自动审核系统API地址
+    timeout: 5000 # 超时时间（毫秒）
+    retry-count: 2 # 重试次数
+    fallback-to-manual: true # 自动审核失败时是否回退到人工审核
+
+# 邮件配置
+mail:
+  host: ${MAIL_HOST:smtp.163.com}
+  port: ${MAIL_PORT:465}
+  from: ${MAIL_FROM:-}  # 发件人邮箱，通过环境变量配置
+  user: ${MAIL_USER:-} # 发件人用户名，通过环境变量配置
+  pass: ${MAIL_PASS:-}  # 发件人密码/授权码，通过环境变量配置
+  ssl: true
+
+# 自定义配置
+museum:
+  info:
+    # 缓存配置
+    cache:
+      # 博物馆信息缓存时间（秒）
+      museum-service-ttl: 3600
+      # 分类标签缓存时间（秒）
+      category-tag-ttl: 7200
+    # 高德地图API配置
+    amap:
+      # 高德地图Web服务API Key
+      key: ${AMAP_KEY:-}
+      # 逆地理编码API地址
+      geocode-url: https://restapi.amap.com/v3/geocode/regeo
+      # 请求超时时间（毫秒）
+      timeout: 5000
+      # 查询半径（米）
+      radius: 1000
+
+logging:
+  config: classpath:logback-spring.xml
+  file:
+    path: /app/logs

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lynn.museum.auth.mapper.UserDeviceMapper">
+
+    <!-- 根据用户ID和设备ID查询设备 -->
+    <select id="selectByUserIdAndDeviceId" resultType="com.lynn.museum.auth.model.entity.UserDevice">
+        SELECT *
+        FROM user_device
+        WHERE user_id = #{userId}
+          AND device_id = #{deviceId}
+          AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <!-- 根据 Refresh Token 查询设备 -->
+    <select id="selectByRefreshToken" resultType="com.lynn.museum.auth.model.entity.UserDevice">
+        SELECT *
+        FROM user_device
+        WHERE refresh_token = #{refreshToken}
+          AND deleted = 0
+          AND status = 1
+        LIMIT 1
+    </select>
+
+    <!-- 查询用户的所有设备 -->
+    <select id="selectByUserId" resultType="com.lynn.museum.auth.model.entity.UserDevice">
+        SELECT *
+        FROM user_device
+        WHERE user_id = #{userId}
+          AND deleted = 0
+        ORDER BY last_active_time DESC
+    </select>
+
+    <!-- 查询用户的活跃设备数量 -->
+    <select id="countActiveDevicesByUserId" resultType="int">
+        SELECT COUNT(*)
+        FROM user_device
+        WHERE user_id = #{userId}
+          AND status = 1
+          AND deleted = 0
+    </select>
+
+    <!-- 更新设备最后活跃时间 -->
+    <update id="updateLastActiveTime">
+        UPDATE user_device
+        SET last_active_time = #{lastActiveTime},
+            update_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 禁用不活跃设备 -->
+    <update id="disableInactiveDevices">
+        UPDATE user_device
+        SET status = 0,
+            update_at = NOW()
+        WHERE last_active_time &lt; DATE_SUB(NOW(), INTERVAL #{inactiveDays} DAY)
+          AND status = 1
+          AND deleted = 0
+    </update>
+
+</mapper>
