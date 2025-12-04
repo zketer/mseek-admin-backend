@@ -89,6 +89,9 @@ tmp/
 .env.test.local
 .env.production.local
 
+# Local configuration files
+**/application-local.yml
+
 # Database
 *.db
 *.sqlite
