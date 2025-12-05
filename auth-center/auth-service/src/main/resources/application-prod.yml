@@ -49,17 +49,14 @@ spring:
   mail:
     host: ${MAIL_HOST:smtp.163.com}
     port: ${MAIL_PORT:465}
-    username: ${MAIL_USERNAME:-}
-    password: ${MAIL_PASSWORD:-}  # 163邮箱授权码
-    from: ${MAIL_FROM:-}
+    username: ${MAIL_USER:}
+    password: ${MAIL_PASS:}  # 163邮箱授权码
+    from: ${MAIL_FROM:}
     code-expire-minutes: 5  # 验证码有效期（分钟）
     properties:
       mail:
         smtp:
           auth: true
-          starttls:
-            enable: true
-            required: true
           ssl:
             enable: true
           socketFactory:

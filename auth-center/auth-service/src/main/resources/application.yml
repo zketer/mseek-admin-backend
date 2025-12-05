@@ -84,3 +84,5 @@ management:
       enabled: false
     redis:
       enabled: false
+    mail:
+      enabled: true
