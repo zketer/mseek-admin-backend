@@ -184,7 +184,7 @@ public class OAuth2ServiceImpl implements OAuth2Service {
         
         // 2. 创建新的系统用户
         Map<String, Object> createUserRequest = new HashMap<>();
-        createUserRequest.put("username", "wx_" + openid.substring(0, 8) + "_" + System.currentTimeMillis() % 10000);
+        createUserRequest.put("username", "wx_" + openid.replaceAll("[^a-zA-Z0-9]", "_"));
         createUserRequest.put("nickname", "微信用户");
         createUserRequest.put("gender", 0);
         createUserRequest.put("status", 1);
@@ -856,8 +856,11 @@ public class OAuth2ServiceImpl implements OAuth2Service {
             // 为第三方登录用户生成随机密码（用户不会使用密码登录，但数据库要求必填）
             String randomPassword = java.util.UUID.randomUUID().toString().replace("-", "");
             
+            // 使用完整的openId作为用户名的一部分，避免冲突
+            String uniqueUsername = "alipay_" + alipayUserInfo.getOpenId().replaceAll("[^a-zA-Z0-9]", "_");
+            
             Map<String, Object> newUserMap = new HashMap<>();
-            newUserMap.put("username", "alipay_" + alipayUserInfo.getOpenId().substring(0, Math.min(8, alipayUserInfo.getOpenId().length())));
+            newUserMap.put("username", uniqueUsername);
             // 随机密码
             newUserMap.put("password", randomPassword);
             // 使用支付宝返回的真实昵称
@@ -873,7 +876,7 @@ public class OAuth2ServiceImpl implements OAuth2Service {
             Result<UserBasicInfo> createResult = userApiClient.createUser(newUserMap);
             
             if (!createResult.isSuccess() || createResult.getData() == null) {
-                throw new BizException("创建支付宝用户失败");
+                throw new BizException("创建支付宝用户失败: " + createResult.getMessage());
             }
             
             UserBasicInfo createdUser = createResult.getData();
@@ -1221,7 +1224,7 @@ public class OAuth2ServiceImpl implements OAuth2Service {
         
         try {
             // 1. 使用code换取access_token
-            String accessToken = getGithubAccessToken(code);
+            String accessToken = getGithubAccessToken(code, null);
             log.info("获取GitHub access_token成功");
             
             // 2. 使用access_token获取用户信息
@@ -1244,7 +1247,7 @@ public class OAuth2ServiceImpl implements OAuth2Service {
     /**
      * 使用授权码换取GitHub access_token
      */
-    private String getGithubAccessToken(String code) {
+    private String getGithubAccessToken(String code, String redirectUri) {
         log.info("使用授权码换取GitHub access_token: code={}", code);
         
         try {
@@ -1253,7 +1256,12 @@ public class OAuth2ServiceImpl implements OAuth2Service {
             params.put("client_id", githubProperties.getWeb().getClientId());
             params.put("client_secret", githubProperties.getWeb().getClientSecret());
             params.put("code", code);
-            params.put("redirect_uri", githubProperties.getWeb().getRedirectUri());
+
+            // 使用传入的redirect_uri，如果没有则使用配置的
+            String finalRedirectUri = StrUtil.isNotBlank(redirectUri) ? redirectUri : githubProperties.getWeb().getRedirectUri();
+            if (StrUtil.isNotBlank(finalRedirectUri)) {
+                params.put("redirect_uri", finalRedirectUri);
+            }
             
             // 调用GitHub API
             String url = githubProperties.getWeb().getTokenUrl();
@@ -1531,7 +1539,7 @@ public class OAuth2ServiceImpl implements OAuth2Service {
             String randomPassword = java.util.UUID.randomUUID().toString().replace("-", "");
             
             Map<String, Object> newUserMap = new HashMap<>();
-            newUserMap.put("username", "wechat_web_" + wechatUserInfo.getOpenid().substring(0, Math.min(8, wechatUserInfo.getOpenid().length())));
+            newUserMap.put("username", "wechat_web_" + wechatUserInfo.getOpenid().replaceAll("[^a-zA-Z0-9]", "_"));
             newUserMap.put("password", randomPassword);
             newUserMap.put("nickname", StrUtil.isNotBlank(wechatUserInfo.getNickname()) 
                     ? wechatUserInfo.getNickname() 

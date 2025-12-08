@@ -182,8 +182,8 @@ museum:
     github:
       # GitHub OAuth应用配置
       web:
-        client-id: ${GITHUB_CLIENT_ID:-} # GitHub OAuth应用Client ID
-        client-secret: ${GITHUB_CLIENT_SECRET:-} # GitHub OAuth应用Client Secret
+        client-id: ${GITHUB_CLIENT_ID} # GitHub OAuth应用Client ID
+        client-secret: ${GITHUB_CLIENT_SECRET} # GitHub OAuth应用Client Secret
         authorize-url: https://github.com/login/oauth/authorize # GitHub授权地址
         token-url: https://github.com/login/oauth/access_token # GitHub获取token地址
         user-info-url: https://api.github.com/user # GitHub获取用户信息地址
